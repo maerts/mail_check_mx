@@ -1,0 +1,44 @@
+<?php
+
+function mail_check_mx_form_user_register_alter(&$form, &$form_state) {
+  $form['account']['mail']['#element_validate'] = array('mail_check_mx_form_element_validate');
+}
+
+function mail_check_mx_form_element_validate($element, &$form_state, $form) {
+  if (preg_match('/@(.+)$/', $element['#value'], $matches)) {
+    $domain = $matches[1];
+    $mx_record_exists = mail_check_mx_has_mx($domain);
+    if (!$mx_record_exists) {
+      form_error($element, t('The e-mail address %mail is not valid.', array('%mail' => $element['#value'])));
+    }
+  }
+}
+
+/**
+ * Checks for valid MX (and A, as a fallback) record for a domain
+ *
+ * Partially borrowed from Apache Zeta components, eZCMailTools::validateEmailAddressMx(),
+ * but adapted to Drupal coding standards
+ *
+ * @param string $domain
+ *
+ * @todo: consider contacting the mail server as well (especially useful if only an A record was found)
+ * @todo: consider caching the MX results
+ */
+function mail_check_mx_has_mx($domain) {
+  if (getmxrr($domain, $hosts, $weights)) {
+    for ($i = 0; $i < count($hosts); $i++) {
+        $mx[$hosts[$i]] = $weights[$i];
+    }
+
+    asort($mx);
+    $mx = array_keys($mx);
+  }
+  elseif (checkdnsrr($domain, 'A')) {
+    $mx[0] = gethostbyname($domain);
+  }
+  else {
+    $mx = array();
+  }
+  return !empty($mx);
+}

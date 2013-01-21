@@ -1,0 +1,3 @@
+name = Mail check MX
+description = Additional MX record validation for account e-mail addresses
+core = 7.x
